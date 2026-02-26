@@ -1,0 +1,55 @@
+name: macOS
+
+on:
+  push:
+    branches: [main]
+    tags: ['*']
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: macOS ${{ matrix.arch }}
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            cef_platform: macosx64
+            project_arch: x86_64
+          - arch: arm64
+            cef_platform: macosarm64
+            project_arch: arm64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: |
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCEF_PLATFORM=${{ matrix.cef_platform }} \
+            -DPROJECT_ARCH=${{ matrix.project_arch }} \
+            -G "Xcode"
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Package
+        run: |
+          cd build/Release
+          zip -r ../../macos-${{ matrix.arch }}.zip examshell.app
+          cd ../..
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.arch }}
+          path: macos-${{ matrix.arch }}.zip
+
+      - name: Upload release asset
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: macos-${{ matrix.arch }}.zip
