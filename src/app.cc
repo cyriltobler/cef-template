@@ -18,6 +18,10 @@ class SimpleWindowDelegate : public CefWindowDelegate {
   explicit SimpleWindowDelegate(CefRefPtr<CefBrowserView> browser_view)
       : browser_view_(browser_view) {}
 
+  cef_runtime_style_t GetWindowRuntimeStyle() override {
+    return CEF_RUNTIME_STYLE_ALLOY;
+  }
+
   void OnWindowCreated(CefRefPtr<CefWindow> window) override {
     window->AddChildView(browser_view_);
     window->Show();
@@ -59,6 +63,10 @@ class SimpleBrowserViewDelegate : public CefBrowserViewDelegate {
     return true;
   }
 
+  cef_runtime_style_t GetBrowserRuntimeStyle() override {
+    return CEF_RUNTIME_STYLE_ALLOY;
+  }
+
  private:
   IMPLEMENT_REFCOUNTING(SimpleBrowserViewDelegate);
   DISALLOW_COPY_AND_ASSIGN(SimpleBrowserViewDelegate);
@@ -67,6 +75,19 @@ class SimpleBrowserViewDelegate : public CefBrowserViewDelegate {
 }  // namespace
 
 SimpleApp::SimpleApp() = default;
+
+void SimpleApp::OnBeforeCommandLineProcessing(
+    const CefString& process_type,
+    CefRefPtr<CefCommandLine> command_line) {
+  // Force Alloy style to get a simple single-window browser
+  // without Chrome's tab strip and address bar.
+  command_line->AppendSwitch("use-alloy-style");
+
+#if defined(OS_MAC)
+  // Disable the macOS keychain prompt.
+  command_line->AppendSwitch("use-mock-keychain");
+#endif
+}
 
 void SimpleApp::OnContextInitialized() {
   CEF_REQUIRE_UI_THREAD();
@@ -98,5 +119,7 @@ void SimpleApp::OnContextInitialized() {
 }
 
 CefRefPtr<CefClient> SimpleApp::GetDefaultClient() {
-  return SimpleHandler::GetInstance();
+  // Return nullptr to prevent Chrome from creating a new tabbed window
+  // when a second instance connects via process singleton.
+  return nullptr;
 }

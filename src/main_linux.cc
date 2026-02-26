@@ -1,5 +1,9 @@
 #include "app.h"
 
+#include <pwd.h>
+#include <unistd.h>
+#include <string>
+
 #include "include/base/cef_logging.h"
 #include "include/cef_command_line.h"
 
@@ -44,6 +48,14 @@ int main(int argc, char* argv[]) {
 
   CefSettings settings;
   settings.no_sandbox = true;
+
+  // Set cache path to avoid process singleton issues.
+  const char* home = getenv("HOME");
+  if (!home) {
+    home = getpwuid(getuid())->pw_dir;
+  }
+  std::string cache_path = std::string(home) + "/.local/share/examshell";
+  CefString(&settings.root_cache_path) = cache_path;
 
   CefRefPtr<SimpleApp> app(new SimpleApp);
 

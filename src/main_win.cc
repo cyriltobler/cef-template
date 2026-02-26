@@ -1,4 +1,5 @@
 #include <windows.h>
+#include <shlobj.h>
 
 #include "include/cef_command_line.h"
 #include "include/cef_sandbox_win.h"
@@ -23,6 +24,14 @@ int APIENTRY wWinMain(HINSTANCE hInstance,
 
   CefSettings settings;
   settings.no_sandbox = true;
+
+  // Set cache path to avoid process singleton issues.
+  wchar_t app_data[MAX_PATH];
+  if (SHGetFolderPathW(nullptr, CSIDL_LOCAL_APPDATA, nullptr, 0, app_data) ==
+      S_OK) {
+    std::wstring cache_path = std::wstring(app_data) + L"\\examshell";
+    CefString(&settings.root_cache_path) = cache_path;
+  }
 
   CefRefPtr<SimpleApp> app(new SimpleApp);
 
